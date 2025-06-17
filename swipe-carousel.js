@@ -6,7 +6,7 @@ class SwipeCarousel extends Carousel {
     this.isSwiping = false
     this._boundSwipeStart = this._swipeStart.bind(this)
     this._boundSwipeEnd = this._swipeEnd.bind(this)
-    this._boundSwipeMove = (e) => e.preventDefault()
+    this._boundSwipeMove = this._swipeMove.bind(this)
   }
 
   _swipeStart(e) {
@@ -15,53 +15,46 @@ class SwipeCarousel extends Carousel {
     this.startPosX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
   }
 
-  _swipeEnd(e) {
+  _swipeMove(e) {
+    if (!this.isSwiping) return
     e.preventDefault()
-    if (!this.isSwiping || this.startPosX == null) return
+  }
+
+  _swipeEnd(e) {
+    if (!this.isSwiping) return
+    e.preventDefault()
+    
     const endPosX = e instanceof MouseEvent ? e.clientX : e.changedTouches[0].clientX
     const swipeDistance = endPosX - this.startPosX
-    if (Math.abs(swipeDistance) > 50) {
+    
+    if (Math.abs(swipeDistance) > 30) { // Зменшуємо поріг для мобільних
       if (swipeDistance > 0) {
         this.prev()
       } else {
         this.next()
       }
     }
+    
     this.isSwiping = false
     this.startPosX = null
   }
 
-  _addSwipeListenersToActiveImage() {
-    // Знімаємо обробники з усіх зображень
-    this.slideItems.forEach(slide => {
-      const img = slide.querySelector('.slide-img')
-      if (img) {
-        img.removeEventListener('touchstart', this._boundSwipeStart)
-        img.removeEventListener('mousedown', this._boundSwipeStart)
-        img.removeEventListener('touchend', this._boundSwipeEnd)
-        img.removeEventListener('mouseup', this._boundSwipeEnd)
-      }
-    })
-    // Додаємо тільки до зображення активного слайда
-    const activeSlide = this.slideItems[this.currentSlide]
-    const activeImg = activeSlide.querySelector('.slide-img')
-    if (activeImg) {
-      activeImg.addEventListener('touchstart', this._boundSwipeStart, { passive: false })
-      activeImg.addEventListener('mousedown', this._boundSwipeStart)
-      activeImg.addEventListener('touchend', this._boundSwipeEnd, { passive: false })
-      activeImg.addEventListener('mouseup', this._boundSwipeEnd)
-      activeImg.addEventListener('touchmove', this._boundSwipeMove, { passive: false })
-    }
-  }
-
-  _gotoNth(n) {
-    super._gotoNth(n)
-    this._addSwipeListenersToActiveImage()
-  }
-
   _initListeners() {
     super._initListeners()
-    this._addSwipeListenersToActiveImage()
+    
+    // Додаємо обробники для всіх слайдів
+    this.slideItems.forEach(slide => {
+      // Touch events
+      slide.addEventListener('touchstart', this._boundSwipeStart, { passive: false })
+      slide.addEventListener('touchmove', this._boundSwipeMove, { passive: false })
+      slide.addEventListener('touchend', this._boundSwipeEnd, { passive: false })
+      
+      // Mouse events
+      slide.addEventListener('mousedown', this._boundSwipeStart)
+      slide.addEventListener('mousemove', this._boundSwipeMove)
+      slide.addEventListener('mouseup', this._boundSwipeEnd)
+      slide.addEventListener('mouseleave', this._boundSwipeEnd)
+    })
   }
 }
 
